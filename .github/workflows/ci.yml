@@ -36,7 +36,7 @@ jobs:
           role-to-assume: arn:aws:iam::744159939985:role/GitHubActionsRole
           aws-region: us-east-1
 
-        - name: Verify AWS Identity
+      - name: Verify AWS Identity
           run: aws sts get-caller-identity
 
       - name: Login to Amazon ECR
