@@ -5,6 +5,10 @@ on:
     branches:
       - main
       - DEV
+    paths:
+      - "app/**"
+      - "Dockerfile"
+      - "requirements.txt"
 
 env:
   IMAGE_TAG: ${{ github.sha }}
