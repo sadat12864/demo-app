@@ -6,7 +6,7 @@ on:
       - main
       - DEV
     paths:
-      - "demo-app/**"
+      - "app.py"
       - "Dockerfile"
       - "requirements.txt"
 
