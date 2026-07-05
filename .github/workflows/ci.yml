@@ -9,6 +9,7 @@ on:
 env:
   IMAGE_TAG: ${{ github.sha }}
   GITOPS_BRANCH: ${{ github.ref_name }}
+  GITOPS_REPO: demo-app-gitops
 
 jobs:
   build:
@@ -60,11 +61,16 @@ jobs:
           docker push \
           ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
       - name: Clone GitOps Repository
         run: |
           git clone \
             --branch "$GITOPS_BRANCH" \
-            https://x-access-token:${{ secrets.GITOPS_PAT }}@github.com/${{ github.repository_owner }}/demo-app-gitops.git
+            https://x-access-token:${{ secrets.GITOPS_PAT }}@github.com/${{ github.repository_owner }}/$GITOPS_REPO.git
 
       - name: Verify GitOps Repository
         run: |
@@ -72,24 +78,40 @@ jobs:
           ls -la
           ls -la demo-app-gitops
 
-      - name: Configure Git
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          
       - name: Go to GitOps Repository
+        working-directory: ${{ env.GITOPS_REPO }}
         run: |
-          cd demo-app-gitops
           pwd
           ls
 
       - name: Update deployment.yaml
+        working-directory: ${{ env.GITOPS_REPO }}
         run: |
-          cd demo-app-gitops
           echo "Before update:"
           grep -n "image:" deployment.yaml
-          sed -i "s|image:.*|        image: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG|g" deployment.yaml
+          sed -i "s|^[[:space:]]*image:.*|        image: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG|" deployment.yaml
           echo "After update:"
           grep -n "image:" deployment.yaml
+
+      - name: Show Git Status
+        working-directory: ${{ env.GITOPS_REPO }}
+        run: |
+          git status
+
+      - name: Commit and Push GitOps Changes
+        working-directory: ${{ env.GITOPS_REPO }}
+        run: |
+          git add deployment.yaml
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "ci(gitops): update image to $IMAGE_TAG"
+          git push origin HEAD:"$GITOPS_BRANCH"
+
+      - name: Verify Push
+        working-directory: ${{ env.GITOPS_REPO }}
+        run: |
+          git log --oneline origin/"$GITOPS_BRANCH" -1
 
 
