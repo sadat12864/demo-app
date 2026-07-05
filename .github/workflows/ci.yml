@@ -35,7 +35,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::744159939985:role/GitHubActionsRole
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}::role/GitHubActionsRole
           aws-region: us-east-1
 
       - name: Verify AWS Identity
@@ -71,3 +71,25 @@ jobs:
           pwd
           ls -la
           ls -la demo-app-gitops
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          
+      - name: Go to GitOps Repository
+        run: |
+          cd demo-app-gitops
+          pwd
+          ls
+
+      - name: Update deployment.yaml
+        run: |
+          cd demo-app-gitops
+          echo "Before update:"
+          grep -n "image:" deployment.yaml
+          sed -i "s|image:.*|        image: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG|g" deployment.yaml
+          echo "After update:"
+          grep -n "image:" deployment.yaml
+
+
